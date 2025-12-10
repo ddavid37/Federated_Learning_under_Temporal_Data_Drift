@@ -2,21 +2,32 @@ import os
 import random
 import glob
 import numpy as np
-# You will need to install flwr, torch, torchvision, scikit-learn in Colab
+import torch
+
+# --- NOTE: Ensure you have installed these libraries in your Colab session ---
 # !pip install flwr torch torchvision scikit-learn
 
-# Import model and dataset utilities
-from model import ClientDataset, get_model # Assuming you moved the utilities here
+# Import necessary components from other project files
+from model import ClientDataset, get_model # Imports the model and dataset structure
+import Case1_Fedavg # Imports the FedAvg simulation function
 
-# --- CONFIGURATION ---
-# CRITICAL: SET THE CORRECT PATH FOR YOUR MOUNTED DRIVE DATA
-# Based on your Google Drive structure, this is the expected path:
-DRIVE_BASE_PATH = "/content/drive/MyDrive/data/PetImages" # You may need to verify this path
+# --- I. CONFIGURATION ---
+
+# CRITICAL: Adjust this path to where your PetImages folder is located on your mounted Drive
+# EXAMPLE PATH (Verify this path against your Drive structure):
+DRIVE_BASE_PATH = "/content/drive/MyDrive/COMSW4776_Fall25/Project/data/PetImages" 
+
 VAL_SPLIT_RATIO = 0.2
 NUM_CLIENTS = 4
 
-# --- DATA PARTITIONING LOGIC (Extreme Label Skew) ---
+# --- II. DATA PARTITIONING LOGIC (Extreme Label Skew) ---
+
 def partition_data(data_root_dir, val_split_ratio=VAL_SPLIT_RATIO, num_clients=NUM_CLIENTS):
+    """
+    Loads all Cat/Dog image file paths, implements Extreme Label Skew (2 Clients per class), 
+    and splits each client's unique shard into non-overlapping training and validation sets.
+    """
+    print(f"Loading data paths from: {data_root_dir}")
     
     # 1. Load all file paths
     cat_dir = os.path.join(data_root_dir, 'Cat')
@@ -26,12 +37,14 @@ def partition_data(data_root_dir, val_split_ratio=VAL_SPLIT_RATIO, num_clients=N
     all_cats = glob.glob(os.path.join(cat_dir, '*.jpg'))
     all_dogs = glob.glob(os.path.join(dog_dir, '*.jpg'))
     
-    # Simple check for corrupted files (file size > 0)
-    all_cats = [f for f in all_cats if os.path.getsize(f) > 0]
-    all_dogs = [f for f in all_dogs if os.path.getsize(f) > 0]
+    # Simple check for files to filter out corrupted or zero-byte files (common in PetImages)
+    all_cats = [f for f in all_cats if os.path.getsize(f) > 0 and 'Cat' in f]
+    all_dogs = [f for f in all_dogs if os.path.getsize(f) > 0 and 'Dog' in f]
 
-    random.shuffle(all_cats)
-    random.shuffle(all_dogs)
+    # Use NumPy's random state for reproducible shuffles
+    np.random.seed(42)
+    np.random.shuffle(all_cats)
+    np.random.shuffle(all_dogs)
 
     # 2. Extreme Label Skew Partition (4 non-overlapping shards)
     half_cats = len(all_cats) // 2
@@ -39,10 +52,10 @@ def partition_data(data_root_dir, val_split_ratio=VAL_SPLIT_RATIO, num_clients=N
 
     # Clients 1 & 2 are 100% Cat; Clients 3 & 4 are 100% Dog
     client_paths = {
-        1: all_cats[:half_cats],      
-        2: all_cats[half_cats:],      
-        3: all_dogs[:half_dogs],      
-        4: all_dogs[half_dogs:],      
+        1: all_cats[:half_cats],      # C1: Cats, Subset A (Train/Val)
+        2: all_cats[half_cats:],      # C2: Cats, Subset B (Train/Val)
+        3: all_dogs[:half_dogs],      # C3: Dogs, Subset A (Train/Val)
+        4: all_dogs[half_dogs:],      # C4: Dogs, Subset B (Train/Val)
     }
     
     # 3. Create Train/Validation Splits for each client
@@ -55,28 +68,47 @@ def partition_data(data_root_dir, val_split_ratio=VAL_SPLIT_RATIO, num_clients=N
         train_paths = paths[:split_idx]
         val_paths = paths[split_idx:]
 
-        # Store (Training Dataset, Validation Dataset) tuple
+        # Store (Training Dataset, Validation Dataset) tuple using the custom ClientDataset class
         client_datasets[client_id] = (ClientDataset(train_paths), ClientDataset(val_paths))
         
-    print(f"Data Partitioned: {len(client_datasets)} clients created.")
+    print(f"--- Partition Summary ---")
+    print(f"Total Images Loaded: {len(all_cats) + len(all_dogs)}")
+    print(f"Clients 1 & 2 (Cat) Train Samples: {len(client_datasets[1][0])} each.")
+    print(f"Clients 3 & 4 (Dog) Train Samples: {len(client_datasets[3][0])} each.")
+    print(f"Data partitioning complete.")
+    
     return client_datasets
 
 
-# --- MAIN EXECUTION LOGIC ---
+# --- III. MAIN EXECUTION LOGIC ---
+
+def run_flwr_simulation(client_datasets, case_module):
+    """Orchestrates the simulation based on the imported case module."""
+    
+    if case_module.__name__ == 'Case1_Fedavg':
+        # Call the FedAvg specific simulation start function
+        return case_module.start_fedavg_simulation(client_datasets, DRIVE_BASE_PATH)
+    # elif case_module.__name__ == 'Case2_FedDrift_Eager':
+        # return case_module.start_feddrift_simulation(client_datasets, DRIVE_BASE_PATH)
+
+
 if __name__ == "__main__":
     
-    # NOTE: You MUST execute the Drive mount cell in Colab first.
-    
+    # 1. Check Data Path (Must be manually mounted in Colab before running)
     if not os.path.exists(DRIVE_BASE_PATH):
         print(f"FATAL ERROR: Data not found at {DRIVE_BASE_PATH}")
+        print("Please ensure Google Drive is mounted and the DRIVE_BASE_PATH is correct.")
     else:
-        # 1. Partition the data for all clients
+        # 2. Partition the data for all clients
         all_client_data = partition_data(DRIVE_BASE_PATH)
 
-        # 2. Run the simulations (Case1_Fedavg, Case2_FedDrift_Eager)
-        # We will implement these cases next.
+        # 3. Run FedAvg Baseline (Case 1)
+        fedavg_results = run_flwr_simulation(all_client_data, Case1_Fedavg)
         
-        # Example of how you will call the simulation:
-        # fedavg_results = run_flwr_simulation(Case1_Fedavg, all_client_data)
-        # feddrift_results = run_flwr_simulation(Case2_FedDrift_Eager, all_client_data)
-        pass # Placeholder for the final Flower calls
+        # NOTE: Implement Case2_FedDrift_Eager after testing the baseline
+        # feddrift_results = run_flwr_simulation(all_client_data, Case2_FedDrift_Eager)
+        
+        print("\nAll required simulations executed.")
+        # You would typically save results here:
+        # save_results_to_drive(fedavg_results, "fedavg_results.csv")
+        
