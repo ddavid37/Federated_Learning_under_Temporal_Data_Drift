@@ -8,13 +8,14 @@ import torch
 # !pip install flwr torch torchvision scikit-learn
 
 # Import necessary components from other project files
-from model import ClientDataset, get_model # Imports the model and dataset structure
-import Case1_Fedavg # Imports the FedAvg simulation function
+from model import ClientDataset, get_model 
+import Case1_Fedavg # FedAvg
+import Case2_FedDrift_Eager # New: FedDrift-Eager
+import Case3_Centralized_Baseline # Centralized
 
 # --- I. CONFIGURATION ---
 
 # CRITICAL: Adjust this path to where your PetImages folder is located on your mounted Drive
-# EXAMPLE PATH (Verify this path against your Drive structure):
 DRIVE_BASE_PATH = "/content/drive/MyDrive/COMSW4776_Fall25/Project/data/PetImages" 
 
 VAL_SPLIT_RATIO = 0.2
@@ -33,15 +34,13 @@ def partition_data(data_root_dir, val_split_ratio=VAL_SPLIT_RATIO, num_clients=N
     cat_dir = os.path.join(data_root_dir, 'Cat')
     dog_dir = os.path.join(data_root_dir, 'Dog')
     
-    # Use glob to find all JPG files quickly
     all_cats = glob.glob(os.path.join(cat_dir, '*.jpg'))
     all_dogs = glob.glob(os.path.join(dog_dir, '*.jpg'))
     
-    # Simple check for files to filter out corrupted or zero-byte files (common in PetImages)
+    # Simple file cleanup (filtering out zero-byte files)
     all_cats = [f for f in all_cats if os.path.getsize(f) > 0 and 'Cat' in f]
     all_dogs = [f for f in all_dogs if os.path.getsize(f) > 0 and 'Dog' in f]
 
-    # Use NumPy's random state for reproducible shuffles
     np.random.seed(42)
     np.random.shuffle(all_cats)
     np.random.shuffle(all_dogs)
@@ -63,12 +62,10 @@ def partition_data(data_root_dir, val_split_ratio=VAL_SPLIT_RATIO, num_clients=N
     for client_id, paths in client_paths.items():
         if not paths: continue
 
-        # Split using list slicing (paths are already shuffled)
-        split_idx = int(len(paths) * (1 - val_split_ratio))
+        split_idx = int(len(paths) * (1 - VAL_SPLIT_RATIO))
         train_paths = paths[:split_idx]
         val_paths = paths[split_idx:]
 
-        # Store (Training Dataset, Validation Dataset) tuple using the custom ClientDataset class
         client_datasets[client_id] = (ClientDataset(train_paths), ClientDataset(val_paths))
         
     print(f"--- Partition Summary ---")
@@ -86,11 +83,12 @@ def run_flwr_simulation(client_datasets, case_module):
     """Orchestrates the simulation based on the imported case module."""
     
     if case_module.__name__ == 'Case1_Fedavg':
-        # Call the FedAvg specific simulation start function
         return case_module.start_fedavg_simulation(client_datasets, DRIVE_BASE_PATH)
-    # elif case_module.__name__ == 'Case2_FedDrift_Eager':
-        # return case_module.start_feddrift_simulation(client_datasets, DRIVE_BASE_PATH)
-
+    elif case_module.__name__ == 'Case2_FedDrift_Eager':
+        return case_module.start_feddrift_simulation(client_datasets, DRIVE_BASE_PATH)
+    elif case_module.__name__ == 'Case3_Centralized_Baseline':
+        return case_module.start_centralized_baseline(client_datasets, DRIVE_BASE_PATH)
+    
 
 if __name__ == "__main__":
     
@@ -102,13 +100,15 @@ if __name__ == "__main__":
         # 2. Partition the data for all clients
         all_client_data = partition_data(DRIVE_BASE_PATH)
 
-        # 3. Run FedAvg Baseline (Case 1)
+        # 3. Run Centralized Baseline (Case 3) - Get the upper bound
+        centralized_results = run_flwr_simulation(all_client_data, Case3_Centralized_Baseline)
+
+        # 4. Run FedAvg Baseline (Case 1) - Get the lower bound (standard FL failure)
         fedavg_results = run_flwr_simulation(all_client_data, Case1_Fedavg)
         
-        # NOTE: Implement Case2_FedDrift_Eager after testing the baseline
-        # feddrift_results = run_flwr_simulation(all_client_data, Case2_FedDrift_Eager)
+        # 5. Run FedDrift-Eager (Case 2) - Test the multi-model solution
+        feddrift_results = run_flwr_simulation(all_client_data, Case2_FedDrift_Eager)
         
         print("\nAll required simulations executed.")
-        # You would typically save results here:
-        # save_results_to_drive(fedavg_results, "fedavg_results.csv")
-        
+        # Final step: Save all results for plotting/analysis
+        # save_results(centralized_results, fedavg_results, feddrift_results)
