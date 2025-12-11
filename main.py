@@ -10,8 +10,8 @@ import torch
 # Import necessary components from other project files
 from model import ClientDataset, get_model 
 import Case1_Fedavg # FedAvg
-import Case2_FedDrift_Eager # New: FedDrift-Eager
-import Case3_Centralized_Baseline # Centralized
+import Case2_FedDrift-Eager # New: FedDrift-Eager
+import Case3_Centralized # Centralized
 
 # --- I. CONFIGURATION ---
 
@@ -84,9 +84,9 @@ def run_flwr_simulation(client_datasets, case_module):
     
     if case_module.__name__ == 'Case1_Fedavg':
         return case_module.start_fedavg_simulation(client_datasets, DRIVE_BASE_PATH)
-    elif case_module.__name__ == 'Case2_FedDrift_Eager':
+    elif case_module.__name__ == 'Case2_FedDrift-Eager':
         return case_module.start_feddrift_simulation(client_datasets, DRIVE_BASE_PATH)
-    elif case_module.__name__ == 'Case3_Centralized_Baseline':
+    elif case_module.__name__ == 'Case3_Centralized':
         return case_module.start_centralized_baseline(client_datasets, DRIVE_BASE_PATH)
     
 
@@ -101,13 +101,13 @@ if __name__ == "__main__":
         all_client_data = partition_data(DRIVE_BASE_PATH)
 
         # 3. Run Centralized Baseline (Case 3) - Get the upper bound
-        centralized_results = run_flwr_simulation(all_client_data, Case3_Centralized_Baseline)
+        centralized_results = run_flwr_simulation(all_client_data, Case3_Centralized)
 
         # 4. Run FedAvg Baseline (Case 1) - Get the lower bound (standard FL failure)
         fedavg_results = run_flwr_simulation(all_client_data, Case1_Fedavg)
         
         # 5. Run FedDrift-Eager (Case 2) - Test the multi-model solution
-        feddrift_results = run_flwr_simulation(all_client_data, Case2_FedDrift_Eager)
+        feddrift_results = run_flwr_simulation(all_client_data, Case2_FedDrift-Eager)
         
         print("\nAll required simulations executed.")
         # Final step: Save all results for plotting/analysis
