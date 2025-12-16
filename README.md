@@ -134,11 +134,19 @@ CNN(
 
 ## 📚 References
 
-1. McMahan et al., "Communication-Efficient Learning of Deep Networks from Decentralized Data," AISTATS 2017
-2. Kirkpatrick et al., "Overcoming catastrophic forgetting in neural networks," PNAS 2017
-3. Shoham et al., "Overcoming Forgetting in Federated Learning on Non-IID Data," NeurIPS Workshop 2019
-4. Yoon et al., "Federated Continual Learning with Weighted Inter-client Transfer," ICML 2021
-
+[1] H. Brendan McMahan, Eider Moore, Daniel Ramage, Seth Hampson, and Blaise Aguera y Arcas. ¨
+Communication-efficient learning of deep networks from decentralized data. In Proceedings
+of the 20th International Conference on Artificial Intelligence and Statistics (AISTATS), 2017.
+arXiv:1602.05629.
+[2] Ligeng Zhu, Zhijian Liu, and Song Han. Deep leakage from gradients. In NeurIPS, 2019.
+arXiv:1906.08935.
+[3] Sylvestre-Alvise Rebuffi, Alexander Kolesnikov, Georg Sperl, and Christoph H. Lampert. iCaRL:
+Incremental classifier and representation learning.
+[4] Fernando E. Casado, David Lema, Marcos F. Criado, Roberto Iglesias, Carlos V. Regueiro,
+and Senen Barro. Concept drift detection and adaptation for federated and continual learning. ´
+Multimedia Tools and Applications, 2021. doi:10.1007/s11042-021-11219-x.
+[5] Han Xiao, Kashif Rasul, and Roland Vollgraf. Fashion-MNIST: a novel image dataset for
+benchmarking machine learning algorithms. arXiv:1708.07747, 2017.
 ## 📄 License
 
 MIT License - See [LICENSE](LICENSE) for details.
