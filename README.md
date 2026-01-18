@@ -53,4 +53,3 @@ We executed three comparative cases to validate the necessity and effectiveness 
 * **`Case1_Fedavg.py`**: Implements the standard FedAvg strategy with corrected metric aggregation.
 * **`Case2_FedDriftEager.py`**: Implements the custom multi-model aggregation strategy for the FedDrift-Eager solution.
 * **`Case3_CentralizedBaseline.py`**: Contains the local PyTorch training loop used to establish the upper bound and monitor epoch-by-epoch loss.
-* 
