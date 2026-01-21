@@ -2,7 +2,7 @@
 
 This repository implements **FedAvg with Experience Replay** to mitigate catastrophic forgetting in federated learning systems experiencing temporal data drift.
 
-You can find the full paper [here](https://arxiv.org/abs/2601.13456)
+You can find the full paper [here](https://arxiv.org/abs/2601.13456).
 ## 📋 Overview
 
 In real-world federated learning deployments, client data distributions shift over time (e.g., seasonal trends in retail, evolving user behavior). Standard FedAvg suffers from **catastrophic forgetting** when faced with such drift—new knowledge overwrites old, causing accuracy collapse.
